@@ -94,15 +94,15 @@ const handleLeaveRoom = (socket, { conversationId }) => {
  * Message is persisted via REST API; this only handles broadcasting.
  */
 const handleSendMessage = (io, socket, messageData) => {
-  const { conversationId, message } = messageData;
-  if (!conversationId || !message) return;
+  const { conversationId } = messageData;
+  if (!conversationId) return;
 
-  // Broadcast to all participants in the conversation except sender
-  socket.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.NEW_MESSAGE, {
-    ...message,
-    senderId: socket.userId,
-    conversationId,
-    timestamp: new Date().toISOString(),
+  // Broadcast the full message object to all participants in the conversation (including sender)
+  // Sender sees it via their own emit; others see it via the room broadcast
+  io.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.NEW_MESSAGE, {
+    ...messageData,
+    senderId: messageData.senderId || socket.userId,
+    timestamp: messageData.createdAt || new Date().toISOString(),
   });
 };
 

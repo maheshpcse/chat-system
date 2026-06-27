@@ -8,9 +8,16 @@
 
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
 const { config } = require("../config/environment");
 const { BadRequestError } = require("../utils/errors");
 const { generateId } = require("../utils/helpers");
+
+// Ensure uploads directory exists
+const uploadDir = path.resolve(config.upload.uploadPath);
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 /**
  * Local disk storage configuration.
@@ -18,7 +25,7 @@ const { generateId } = require("../utils/helpers");
  */
 const diskStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, config.upload.uploadPath);
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const uniqueName = `${generateId()}${path.extname(file.originalname)}`;

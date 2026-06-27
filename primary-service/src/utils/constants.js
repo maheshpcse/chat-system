@@ -59,6 +59,11 @@ const SOCKET_EVENTS = Object.freeze({
   MESSAGE_READ: "messageRead",
   MESSAGE_DELIVERED: "messageDelivered",
   NOTIFICATION: "notification",
+  // Contact events
+  CONTACT_REQUEST_RECEIVED: "contactRequestReceived",
+  CONTACT_REQUEST_ACCEPTED: "contactRequestAccepted",
+  CONTACT_REQUEST_REJECTED: "contactRequestRejected",
+  CONTACT_LIST_UPDATED: "contactListUpdated",
 });
 
 const REDIS_KEYS = Object.freeze({

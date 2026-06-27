@@ -1,6 +1,7 @@
 "use strict";
 
 const uploadService = require("./upload.service");
+const userRepository = require("../user/user.repository");
 const { sendSuccess } = require("../../utils/response");
 
 class UploadController {
@@ -11,6 +12,22 @@ class UploadController {
       }
       const result = await uploadService.uploadFile(req.file, req.user.userId, "local");
       return sendSuccess(res, 201, "File uploaded", result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async uploadAvatar(req, res, next) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: "No file provided" });
+      }
+      const result = await uploadService.uploadFile(req.file, req.user.userId, "local");
+
+      // Save avatar URL to users table
+      await userRepository.updateProfile(req.user.userId, { avatarUrl: result.url });
+
+      return sendSuccess(res, 201, "Avatar uploaded and saved", result);
     } catch (error) {
       next(error);
     }

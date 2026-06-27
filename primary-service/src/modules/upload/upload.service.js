@@ -69,7 +69,8 @@ class UploadService {
       await fs.writeFile(path.join(uploadDir, fileName), file.buffer);
     }
 
-    return { url: `/uploads/${fileName}` };
+    const baseUrl = `http://localhost:${config.app.port}`;
+    return { url: `${baseUrl}/uploads/${fileName}` };
   }
 
   async uploadToS3(file, fileName) {

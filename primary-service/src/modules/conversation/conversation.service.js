@@ -1,13 +1,20 @@
 "use strict";
 
 const conversationRepository = require("./conversation.repository");
+const contactRepository = require("../contact/contact.repository");
 const { getRedisClient } = require("../../config/redis");
 const { generateId } = require("../../utils/helpers");
-const { NotFoundError, ConflictError } = require("../../utils/errors");
+const { NotFoundError, ConflictError, ForbiddenError } = require("../../utils/errors");
 const { REDIS_KEYS, REDIS_TTL } = require("../../utils/constants");
 
 class ConversationService {
   async createPrivateConversation(userId, participantId) {
+    // Verify users are contacts before allowing conversation
+    const areContacts = await contactRepository.areUsersContacts(userId, participantId);
+    if (!areContacts) {
+      throw new ForbiddenError("You can start chat only after contact request is accepted");
+    }
+
     // Check if conversation already exists
     const existing = await conversationRepository.findPrivateConversation(userId, participantId);
     if (existing) {

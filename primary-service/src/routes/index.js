@@ -16,6 +16,7 @@ const conversationRoutes = require("../modules/conversation/conversation.routes"
 const messageRoutes = require("../modules/message/message.routes");
 const groupRoutes = require("../modules/group/group.routes");
 const uploadRoutes = require("../modules/upload/upload.routes");
+const contactRoutes = require("../modules/contact/contact.routes");
 
 // Register routes with prefixes
 router.use("/auth", authRoutes);
@@ -24,6 +25,7 @@ router.use("/conversations", conversationRoutes);
 router.use("/messages", messageRoutes);
 router.use("/groups", groupRoutes);
 router.use("/uploads", uploadRoutes);
+router.use("/contacts", contactRoutes);
 
 // Health check
 router.get("/health", (req, res) => {

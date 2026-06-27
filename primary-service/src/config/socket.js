@@ -23,6 +23,7 @@ const initializeSocket = (httpServer) => {
       methods: ["GET", "POST"],
       credentials: true,
     },
+    allowEIO3: true, // Support Socket.IO v2 clients (EIO=3)
     pingTimeout: config.socket.pingTimeout,
     pingInterval: config.socket.pingInterval,
     transports: ["websocket", "polling"],

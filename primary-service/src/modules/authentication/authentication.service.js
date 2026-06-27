@@ -211,10 +211,9 @@ class AuthenticationService {
       { expiresIn: config.jwt.refreshExpiry }
     );
 
-    // Calculate expiry date for storage
-    const expiresAt = new Date(
-      Date.now() + this.parseExpiry(config.jwt.refreshExpiry)
-    ).toISOString();
+    // Calculate expiry date for storage (MySQL DATETIME format: YYYY-MM-DD HH:MM:SS)
+    const expiryDate = new Date(Date.now() + this.parseExpiry(config.jwt.refreshExpiry));
+    const expiresAt = expiryDate.toISOString().slice(0, 19).replace("T", " ");
 
     // Store refresh token in database
     await authRepository.storeRefreshToken(userId, refreshToken, expiresAt);

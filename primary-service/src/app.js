@@ -24,7 +24,9 @@ const app = express();
 // =============================================
 // Security Middleware
 // =============================================
-app.use(helmet()); // Security headers
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
 app.use(hpp()); // Prevent HTTP parameter pollution
 app.use(cors({
   origin: config.cors.origin,

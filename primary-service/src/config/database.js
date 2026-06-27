@@ -55,6 +55,7 @@ const callProcedure = async (procedureName, params = []) => {
   try {
     const placeholders = params.map(() => "?").join(", ");
     const query = `CALL ${procedureName}(${placeholders})`;
+    logger.info('Stored Procedure Query:', query);
     const [results] = await connection.execute(query, params);
     return results;
   } catch (error) {
