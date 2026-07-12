@@ -26,12 +26,20 @@ const createRedisClient = (purpose = "default") => {
     password: config.redis.password,
     db: config.redis.db,
     keyPrefix: config.redis.keyPrefix,
+    connectTimeout: config.redis.connectTimeout,
     retryStrategy: (times) => {
+      if (!config.redis.required) {
+        logger.warn(
+          `Redis [${purpose}] optional mode: stopping reconnect attempts after first failure.`
+        );
+        return null;
+      }
+
       const delay = Math.min(times * 50, 2000);
       logger.warn(`Redis [${purpose}] retry attempt ${times}, delay ${delay}ms`);
       return delay;
     },
-    maxRetriesPerRequest: 3,
+    maxRetriesPerRequest: config.redis.maxRetriesPerRequest,
     enableReadyCheck: true,
     lazyConnect: false,
   });
@@ -41,7 +49,12 @@ const createRedisClient = (purpose = "default") => {
   });
 
   client.on("error", (error) => {
-    logger.error(`Redis [${purpose}] error:`, error.message);
+    logger.error(`Redis [${purpose}] error: ${error.message || "unknown error"}`, {
+      code: error.code,
+      errno: error.errno,
+      address: error.address,
+      port: error.port,
+    });
   });
 
   client.on("close", () => {

@@ -31,8 +31,20 @@ const startServer = async () => {
 
     // Step 3: Initialize Redis
     const redis = getRedisClient();
-    await redis.ping();
-    logger.info("Redis connected successfully");
+    try {
+      await redis.ping();
+      logger.info("Redis connected successfully");
+    } catch (error) {
+      if (config.redis.required) {
+        throw error;
+      }
+
+      logger.warn(
+        `Redis unavailable at ${config.redis.host}:${config.redis.port}. Continuing startup because REDIS_REQUIRED is false.`
+      );
+      redis.disconnect();
+      logger.warn("Redis client disconnected for this process (optional mode)");
+    }
 
     // Step 4: Create HTTP server and attach Socket.IO
     const httpServer = http.createServer(app);

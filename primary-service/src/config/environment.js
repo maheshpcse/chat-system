@@ -9,6 +9,15 @@
 const dotenv = require("dotenv");
 const path = require("path");
 
+const parseBoolean = (value, defaultValue = false) => {
+  if (value === undefined) {
+    return defaultValue;
+  }
+
+  const normalized = String(value).trim().toLowerCase();
+  return ["1", "true", "yes", "on"].includes(normalized);
+};
+
 // Load environment variables from .env file
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
@@ -47,6 +56,9 @@ const config = {
     password: process.env.REDIS_PASSWORD || undefined,
     db: parseInt(process.env.REDIS_DB, 10) || 0,
     keyPrefix: process.env.REDIS_KEY_PREFIX || "chat:",
+    required: parseBoolean(process.env.REDIS_REQUIRED, process.env.APP_ENV === "production"),
+    connectTimeout: parseInt(process.env.REDIS_CONNECT_TIMEOUT, 10) || 10000,
+    maxRetriesPerRequest: parseInt(process.env.REDIS_MAX_RETRIES_PER_REQUEST, 10) || 3,
   },
 
   aws: {

@@ -78,10 +78,26 @@ const handleUserOnline = async (io, socket) => {
 
   // Only broadcast if this is the first socket (was offline, now online)
   if (count === 1) {
-    socket.broadcast.emit(SOCKET_EVENTS.USER_ONLINE, {
-      userId: socket.userId,
-      timestamp: Date.now(),
-    });
+    // Contact-scoped broadcast: only notify user's contacts, not everyone
+    try {
+      const userRepository = require("../modules/user/user.repository");
+      const contacts = await userRepository.getOnlineContacts(socket.userId);
+      contacts.forEach((contact) => {
+        io.to(`user:${contact.user_id || contact.id}`).emit(
+          SOCKET_EVENTS.USER_ONLINE,
+          {
+            userId: socket.userId,
+            timestamp: Date.now(),
+          }
+        );
+      });
+    } catch (err) {
+      // Fallback: broadcast to all if contact lookup fails
+      socket.broadcast.emit(SOCKET_EVENTS.USER_ONLINE, {
+        userId: socket.userId,
+        timestamp: Date.now(),
+      });
+    }
     logger.info(`User ${socket.userId} is now ONLINE (first socket)`);
   }
 
@@ -200,11 +216,25 @@ const handleDisconnect = async (io, socket) => {
     await redis.del(sessionKey);
     await redis.del(`${REDIS_KEYS.USER_ONLINE}${socket.userId}`);
 
-    // Broadcast offline status
-    socket.broadcast.emit(SOCKET_EVENTS.USER_OFFLINE, {
-      userId: socket.userId,
-      lastSeen: new Date().toISOString(),
-    });
+    // Contact-scoped offline broadcast
+    try {
+      const userRepository = require("../modules/user/user.repository");
+      const contacts = await userRepository.getOnlineContacts(socket.userId);
+      contacts.forEach((contact) => {
+        io.to(`user:${contact.user_id || contact.id}`).emit(
+          SOCKET_EVENTS.USER_OFFLINE,
+          {
+            userId: socket.userId,
+            lastSeen: new Date().toISOString(),
+          }
+        );
+      });
+    } catch (err) {
+      socket.broadcast.emit(SOCKET_EVENTS.USER_OFFLINE, {
+        userId: socket.userId,
+        lastSeen: new Date().toISOString(),
+      });
+    }
 
     logger.info(`User ${socket.userId} is now OFFLINE (all sockets disconnected)`);
   } else {

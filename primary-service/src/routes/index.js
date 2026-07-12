@@ -18,6 +18,9 @@ const groupRoutes = require("../modules/group/group.routes");
 const uploadRoutes = require("../modules/upload/upload.routes");
 const contactRoutes = require("../modules/contact/contact.routes");
 const presenceRoutes = require("../modules/presence/presence.routes");
+const notificationRoutes = require("../modules/notification/notification.routes");
+const settingsRoutes = require("../modules/settings/settings.routes");
+const scheduledMessageRoutes = require("../modules/scheduled-message/scheduled-message.routes");
 
 // Register routes with prefixes
 router.use("/auth", authRoutes);
@@ -28,6 +31,9 @@ router.use("/groups", groupRoutes);
 router.use("/uploads", uploadRoutes);
 router.use("/contacts", contactRoutes);
 router.use("/presence", presenceRoutes);
+router.use("/notifications", notificationRoutes);
+router.use("/settings", settingsRoutes);
+router.use("/scheduled-messages", scheduledMessageRoutes);
 
 // Health check
 router.get("/health", (req, res) => {
