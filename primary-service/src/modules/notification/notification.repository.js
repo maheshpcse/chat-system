@@ -8,19 +8,22 @@
 const { callProcedure } = require("../../config/database");
 
 class NotificationRepository {
-  async create(userId, type, title, message, data = null) {
-    const result = await callProcedure("sp_create_notification", [
+  async create(userId, { actorUserId = null, type, title, body = null, entityType = null, entityId = null, data = null }) {
+    const result = await callProcedure("spCreateNotification", [
       userId,
+      actorUserId,
       type,
       title,
-      message,
+      body,
+      entityType,
+      entityId,
       data ? JSON.stringify(data) : null,
     ]);
     return result[0] ? result[0][0] : null;
   }
 
   async getUserNotifications(userId, page = 1, limit = 20) {
-    const result = await callProcedure("sp_get_user_notifications", [
+    const result = await callProcedure("spGetUserNotifications", [
       userId,
       page,
       limit,
@@ -29,22 +32,22 @@ class NotificationRepository {
   }
 
   async getUnreadCount(userId) {
-    const result = await callProcedure("sp_get_unread_notification_count", [
+    const result = await callProcedure("spGetUnreadNotificationCount", [
       userId,
     ]);
-    return result[0] ? result[0][0].unread_count : 0;
+    return result[0] ? result[0][0].unreadCount : 0;
   }
 
   async markAsRead(notificationId, userId) {
-    await callProcedure("sp_mark_notification_read", [notificationId, userId]);
+    await callProcedure("spMarkNotificationRead", [notificationId, userId]);
   }
 
   async markAllAsRead(userId) {
-    await callProcedure("sp_mark_all_notifications_read", [userId]);
+    await callProcedure("spMarkAllNotificationsRead", [userId]);
   }
 
   async clearAll(userId) {
-    await callProcedure("sp_clear_notifications", [userId]);
+    await callProcedure("spClearNotifications", [userId]);
   }
 }
 

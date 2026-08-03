@@ -61,6 +61,37 @@ class ContactRepository {
     const result = await callProcedure("spGetContactRequestStatus", [userId, otherUserId]);
     return result[0] ? result[0][0] : { relationStatus: "none", requestId: null };
   }
+
+  async blockContact(blockId, blockerUserId, blockedUserId, reason) {
+    const result = await callProcedure("spBlockContact", [
+      blockId,
+      blockerUserId,
+      blockedUserId,
+      reason || null,
+    ]);
+    return result[0] ? result[0][0] : null;
+  }
+
+  async unblockContact(blockerUserId, blockedUserId) {
+    const result = await callProcedure("spUnblockContact", [blockerUserId, blockedUserId]);
+    return result[0] ? result[0][0] : null;
+  }
+
+  async isBlocked(userId1, userId2) {
+    const result = await callProcedure("spIsBlocked", [userId1, userId2]);
+    return result[0] && result[0][0] ? result[0][0].blocked > 0 : false;
+  }
+
+  async updateContactSettings(userId, contactUserId, { nickname = null, muted = null, pinned = null }) {
+    const result = await callProcedure("spUpdateContactSettings", [
+      userId,
+      contactUserId,
+      nickname,
+      muted === null ? null : muted ? 1 : 0,
+      pinned === null ? null : pinned ? 1 : 0,
+    ]);
+    return result[0] ? result[0][0] : null;
+  }
 }
 
 module.exports = new ContactRepository();

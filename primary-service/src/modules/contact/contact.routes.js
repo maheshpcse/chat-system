@@ -4,7 +4,7 @@ const { Router } = require("express");
 const contactController = require("./contact.controller");
 const { authenticate } = require("../../middleware/authentication");
 const { validate } = require("../../middleware/validation");
-const { sendRequestSchema, requestIdParamSchema, contactUserIdParamSchema } = require("./contact.validation");
+const { sendRequestSchema, requestIdParamSchema, contactUserIdParamSchema, blockContactSchema, contactSettingsSchema } = require("./contact.validation");
 
 const router = Router();
 
@@ -22,5 +22,12 @@ router.put("/requests/:requestId/cancel", validate(requestIdParamSchema), contac
 // Contacts list
 router.get("/", contactController.getContacts);
 router.delete("/:contactUserId", validate(contactUserIdParamSchema), contactController.removeContact);
+
+// Block / Unblock
+router.post("/:contactUserId/block", validate(blockContactSchema), contactController.blockContact);
+router.post("/:contactUserId/unblock", validate(contactUserIdParamSchema), contactController.unblockContact);
+
+// Per-contact settings (nickname / mute / pin)
+router.put("/:contactUserId/settings", validate(contactSettingsSchema), contactController.updateContactSettings);
 
 module.exports = router;

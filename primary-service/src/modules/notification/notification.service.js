@@ -9,6 +9,7 @@
 const { EventEmitter } = require("events");
 const { getIO } = require("../../config/socket");
 const { getRedisClient } = require("../../config/redis");
+const notificationRepository = require("./notification.repository");
 const logger = require("../../utils/logger");
 
 class NotificationEmitter extends EventEmitter {}
@@ -110,9 +111,35 @@ const notifyTyping = (recipientId, conversationId, senderId, isTyping) => {
   }
 };
 
+/**
+ * Persists a notification AND pushes it to the user in real time so the bell
+ * badge + dropdown update immediately. Never throws to the caller.
+ */
+const createAndNotify = async (userId, payload) => {
+  let saved = null;
+  try {
+    saved = await notificationRepository.create(userId, payload);
+  } catch (err) {
+    logger.error("Notification persist failed:", err.message);
+  }
+  try {
+    const io = getIO();
+    io.to(`user:${userId}`).emit("notification", saved || {
+      userId,
+      ...payload,
+      isRead: 0,
+      createdAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    logger.error("Notification emit failed:", err.message);
+  }
+  return saved;
+};
+
 module.exports = {
   notificationEmitter,
   createNotificationSender,
+  createAndNotify,
   notifyNewMessage,
   notifyTyping,
   sendSocketNotification,

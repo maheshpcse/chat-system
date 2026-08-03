@@ -49,9 +49,28 @@ const changePasswordSchema = {
   }),
 };
 
+const forgotPasswordSchema = {
+  body: Joi.object({
+    email: Joi.string().email().required(),
+  }),
+};
+
+const resetPasswordSchema = {
+  body: Joi.object({
+    resetToken: Joi.string().required(),
+    newPassword: Joi.string().min(8).max(128).required()
+      .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/)
+      .messages({
+        "string.pattern.base": "New password must contain uppercase, lowercase, number, and special character",
+      }),
+  }),
+};
+
 module.exports = {
   registerSchema,
   loginSchema,
   refreshTokenSchema,
   changePasswordSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 };

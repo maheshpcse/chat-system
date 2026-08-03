@@ -34,6 +34,17 @@ const config = {
     refreshSecret: process.env.JWT_REFRESH_SECRET,
     expiry: process.env.JWT_EXPIRY || "15m",
     refreshExpiry: process.env.JWT_REFRESH_EXPIRY || "7d",
+    adminSecret: process.env.JWT_ADMIN_SECRET || process.env.JWT_SECRET,
+    adminRefreshSecret: process.env.JWT_ADMIN_REFRESH_SECRET || process.env.JWT_REFRESH_SECRET,
+    adminExpiry: process.env.JWT_ADMIN_EXPIRY || process.env.JWT_EXPIRY || "15m",
+    adminRefreshExpiry: process.env.JWT_ADMIN_REFRESH_EXPIRY || process.env.JWT_REFRESH_EXPIRY || "7d",
+  },
+
+  admin: {
+    email: process.env.ADMIN_EMAIL || "admin@chatapp.com",
+    password: process.env.ADMIN_PASSWORD || "Admin@12345",
+    firstName: process.env.ADMIN_FIRST_NAME || "Super",
+    lastName: process.env.ADMIN_LAST_NAME || "Admin",
   },
 
   mysql: {
@@ -77,7 +88,7 @@ const config = {
   },
 
   socket: {
-    corsOrigin: process.env.SOCKET_CORS_ORIGIN || "http://localhost:4200",
+    corsOrigin: process.env.SOCKET_CORS_ORIGIN || "http://localhost:5200",
     pingTimeout: parseInt(process.env.SOCKET_PING_TIMEOUT, 10) || 60000,
     pingInterval: parseInt(process.env.SOCKET_PING_INTERVAL, 10) || 25000,
   },
@@ -93,7 +104,7 @@ const config = {
   },
 
   cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:4200",
+    origin: process.env.CORS_ORIGIN || "http://localhost:5200",
     methods: (process.env.CORS_METHODS || "GET,POST,PUT,DELETE,PATCH").split(","),
   },
 
@@ -110,6 +121,8 @@ const validateConfig = () => {
   const requiredVars = [
     { key: "JWT_SECRET", value: config.jwt.secret },
     { key: "JWT_REFRESH_SECRET", value: config.jwt.refreshSecret },
+    { key: "JWT_ADMIN_SECRET", value: config.jwt.adminSecret },
+    { key: "JWT_ADMIN_REFRESH_SECRET", value: config.jwt.adminRefreshSecret },
     { key: "MYSQL_HOST", value: config.mysql.host },
     { key: "MYSQL_DATABASE", value: config.mysql.database },
   ];

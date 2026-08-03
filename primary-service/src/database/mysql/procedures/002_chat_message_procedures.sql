@@ -23,7 +23,8 @@ BEGIN
   VALUES (pConversationId, pUserId), (pConversationId, pParticipantId);
 
   SELECT c.conversationId, c.conversationType, c.createdAt,
-         u.userId AS participantId, u.firstName, u.lastName, u.username, u.avatarUrl
+         u.userId AS participantId, u.firstName, u.lastName, u.username, u.avatarUrl,
+         CONCAT(u.firstName, ' ', u.lastName) AS displayName
   FROM conversations c
   INNER JOIN conversationParticipants cp ON c.conversationId = cp.conversationId
   INNER JOIN users u ON cp.userId = u.userId
@@ -39,10 +40,18 @@ CREATE PROCEDURE spFindPrivateConversation(
   IN pParticipantId CHAR(36)
 )
 BEGIN
-  SELECT c.conversationId, c.conversationType, c.lastMessageAt, c.createdAt
+  /* Include peer profile so FE can show name/avatar/online without a second round-trip. */
+  SELECT c.conversationId, c.conversationType, c.lastMessageAt, c.createdAt,
+         u.userId AS participantId,
+         u.firstName,
+         u.lastName,
+         u.username,
+         u.avatarUrl,
+         CONCAT(u.firstName, ' ', u.lastName) AS displayName
   FROM conversations c
   INNER JOIN conversationParticipants cp1 ON c.conversationId = cp1.conversationId
   INNER JOIN conversationParticipants cp2 ON c.conversationId = cp2.conversationId
+  INNER JOIN users u ON u.userId = pParticipantId
   WHERE c.conversationType = 'private'
     AND cp1.userId = pUserId
     AND cp2.userId = pParticipantId
@@ -64,6 +73,15 @@ BEGIN
   SELECT c.conversationId, c.conversationType, c.lastMessageAt,
          m.content AS lastMessageContent, m.messageType AS lastMessageType,
          m.senderId AS lastMessageSender,
+         CASE
+           WHEN c.conversationType = 'private' THEN
+             (SELECT u2.userId
+              FROM conversationParticipants cp2
+              INNER JOIN users u2 ON cp2.userId = u2.userId
+              WHERE cp2.conversationId = c.conversationId AND cp2.userId != pUserId
+              LIMIT 1)
+           ELSE NULL
+         END AS participantId,
          CASE
            WHEN c.conversationType = 'private' THEN
              (SELECT CONCAT(u2.firstName, ' ', u2.lastName)

@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS contactRequests (
   CONSTRAINT fkContactReqSender FOREIGN KEY (senderUserId) REFERENCES users(userId) ON DELETE CASCADE,
   CONSTRAINT fkContactReqReceiver FOREIGN KEY (receiverUserId) REFERENCES users(userId) ON DELETE CASCADE,
   CONSTRAINT chkContactReqNotSelf CHECK (senderUserId != receiverUserId)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);
 
 -- ============================================================
 -- TABLE: userContacts
@@ -50,4 +50,4 @@ CREATE TABLE IF NOT EXISTS userContacts (
   CONSTRAINT fkContactUser FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE,
   CONSTRAINT fkContactContactUser FOREIGN KEY (contactUserId) REFERENCES users(userId) ON DELETE CASCADE,
   CONSTRAINT chkContactNotSelf CHECK (userId != contactUserId)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);

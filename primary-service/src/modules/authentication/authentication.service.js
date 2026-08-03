@@ -192,6 +192,59 @@ class AuthenticationService {
   }
 
   /**
+   * Forgot password — step 1.
+   * Verifies the email exists in the database and issues a short-lived,
+   * single-purpose reset token. (In production this token would be emailed;
+   * here it is returned so the frontend can continue the reset flow.)
+   * @param {string} email
+   * @returns {Promise<Object>} { resetToken, expiresInMinutes }
+   */
+  async forgotPassword(email) {
+    const user = await authRepository.findUserByEmail(email);
+    if (!user) {
+      // Explicit feedback is required by the product flow (email is verified
+      // against the database before allowing a password change).
+      throw new BadRequestError("No account found with this email address");
+    }
+
+    const resetToken = jwt.sign(
+      { userId: user.userId, email: user.email, purpose: "password-reset" },
+      config.jwt.secret,
+      { expiresIn: "15m" }
+    );
+
+    logger.info("Password reset token issued", { userId: user.userId });
+    return { resetToken, expiresInMinutes: 15 };
+  }
+
+  /**
+   * Forgot password — step 2.
+   * Validates the reset token and sets the new password.
+   * @param {string} resetToken
+   * @param {string} newPassword
+   */
+  async resetPassword(resetToken, newPassword) {
+    let payload;
+    try {
+      payload = jwt.verify(resetToken, config.jwt.secret);
+    } catch (err) {
+      throw new UnauthorizedError("Reset link is invalid or has expired");
+    }
+
+    if (payload.purpose !== "password-reset" || !payload.userId) {
+      throw new UnauthorizedError("Invalid reset token");
+    }
+
+    const newPasswordHash = await bcrypt.hash(newPassword, config.bcrypt.saltRounds);
+    await authRepository.updatePassword(payload.userId, newPasswordHash);
+
+    // Invalidate every existing session after a reset.
+    await authRepository.revokeAllRefreshTokens(payload.userId);
+
+    logger.info("Password reset completed", { userId: payload.userId });
+  }
+
+  /**
    * Generates an access token and refresh token pair.
    * @param {string} userId - User ID
    * @param {string} email - User email

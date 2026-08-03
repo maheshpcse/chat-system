@@ -38,6 +38,11 @@ class ConversationRepository {
   async updateLastMessage(conversationId, messageId) {
     await callProcedure("spUpdateConversationLastMessage", [conversationId, messageId]);
   }
+
+  async getParticipants(conversationId) {
+    const result = await callProcedure("spGetConversationParticipants", [conversationId]);
+    return result[0] || [];
+  }
 }
 
 module.exports = new ConversationRepository();

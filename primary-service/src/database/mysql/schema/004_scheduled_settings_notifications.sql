@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS scheduledMessages (
     INDEX idxScheduledConversation (conversationId),
     CONSTRAINT fkScheduledMessagesSender FOREIGN KEY (senderId) REFERENCES users(userId) ON DELETE CASCADE,
     CONSTRAINT fkScheduledMessagesConversation FOREIGN KEY (conversationId) REFERENCES conversations(conversationId) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);
 
 -- ============================================================
 -- TABLE: userSettings
@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS userSettings (
     UNIQUE KEY ukUserSettingKey (userId, settingKey),
     INDEX idxSettingsUser (userId),
     CONSTRAINT fkUserSettingsUser FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);
 
 -- ============================================================
 -- TABLE: notificationsArchive (Separate from notifications in 001_create_tables.sql)
@@ -67,4 +67,4 @@ CREATE TABLE IF NOT EXISTS notificationsArchive (
     INDEX idxNotificationArchiveUser (userId, archivedAt DESC),
     INDEX idxNotificationArchiveCreated (createdAt DESC),
     CONSTRAINT fkNotificationArchiveUser FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);

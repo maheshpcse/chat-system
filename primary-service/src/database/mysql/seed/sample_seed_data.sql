@@ -49,15 +49,15 @@
 -- ============================================
 -- Run these to verify tables were created properly:
 
-SELECT 'scheduled_messages' AS table_name, COUNT(*) AS row_count FROM scheduled_messages
-UNION ALL
-SELECT 'user_settings', COUNT(*) FROM user_settings
-UNION ALL
-SELECT 'notifications', COUNT(*) FROM notifications;
+-- SELECT 'scheduled_messages' AS table_name, COUNT(*) AS row_count FROM scheduled_messages
+-- UNION ALL
+-- SELECT 'user_settings', COUNT(*) FROM user_settings
+-- UNION ALL
+-- SELECT 'notifications', COUNT(*) FROM notifications;
 
 -- Verify stored procedures exist:
-SELECT ROUTINE_NAME, ROUTINE_TYPE
-FROM INFORMATION_SCHEMA.ROUTINES
-WHERE ROUTINE_SCHEMA = DATABASE()
-  AND ROUTINE_NAME LIKE 'sp_%'
-ORDER BY ROUTINE_NAME;
+-- SELECT ROUTINE_NAME, ROUTINE_TYPE
+-- FROM INFORMATION_SCHEMA.ROUTINES
+-- WHERE ROUTINE_SCHEMA = DATABASE()
+--   AND ROUTINE_NAME LIKE 'sp_%'
+-- ORDER BY ROUTINE_NAME;

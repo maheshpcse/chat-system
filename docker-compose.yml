@@ -1,0 +1,99 @@
+# =============================================================================
+# Local / single-VPS stack: MySQL + Redis + primary-service (+ optional FE)
+# From Chat System repo root:
+#   cp primary-service/.env.example primary-service/.env   # edit secrets
+#   docker compose up -d --build
+# Health: http://localhost:3000/api/v1/health
+# =============================================================================
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: chat-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-chat_system}
+      MYSQL_USER: ${MYSQL_USERNAME:-chat}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-chatpass}
+    ports:
+      - "${MYSQL_PUBLISH_PORT:-3306}:3306"
+    volumes:
+      - chat_mysql_data:/var/lib/mysql
+      - ./Table-schemas.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-rootpass}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: chat-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PUBLISH_PORT:-6379}:6379"
+    volumes:
+      - chat_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  primary-service:
+    build:
+      context: ./primary-service
+      dockerfile: Dockerfile
+    container_name: chat-primary
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - ./primary-service/.env
+    environment:
+      APP_ENV: production
+      APP_PORT: 3000
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_REQUIRED: "false"
+    ports:
+      - "${APP_PUBLISH_PORT:-3000}:3000"
+    volumes:
+      - chat_uploads:/app/uploads
+      - chat_logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/api/v1/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # Optional: build FE image from sibling Chat App path (uncomment if co-located)
+  # frontend:
+  #   build:
+  #     context: ../Chat App
+  #     dockerfile: Dockerfile
+  #     args:
+  #       BASE_HREF: /
+  #   ports:
+  #     - "8080:80"
+  #   depends_on:
+  #     - primary-service
+
+volumes:
+  chat_mysql_data:
+  chat_redis_data:
+  chat_uploads:
+  chat_logs:

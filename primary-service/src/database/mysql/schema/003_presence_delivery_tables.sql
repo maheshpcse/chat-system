@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS `userPresence` (
   PRIMARY KEY (`userId`),
   INDEX `idx_presence_online` (`isOnline`),
   CONSTRAINT `fk_presence_user` FOREIGN KEY (`userId`) REFERENCES `users`(`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+);
 
 -- Message Delivery/Read Status
 CREATE TABLE IF NOT EXISTS `messageDelivery` (
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS `messageDelivery` (
   INDEX `idx_delivery_status` (`status`),
   CONSTRAINT `fk_delivery_message` FOREIGN KEY (`messageId`) REFERENCES `messages`(`messageId`) ON DELETE CASCADE,
   CONSTRAINT `fk_delivery_user` FOREIGN KEY (`userId`) REFERENCES `users`(`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+);
 
 -- Shared Media/Files tracking
 CREATE TABLE IF NOT EXISTS `sharedMedia` (
@@ -54,4 +54,4 @@ CREATE TABLE IF NOT EXISTS `sharedMedia` (
   CONSTRAINT `fk_media_conversation` FOREIGN KEY (`conversationId`) REFERENCES `conversations`(`conversationId`) ON DELETE CASCADE,
   CONSTRAINT `fk_media_message` FOREIGN KEY (`messageId`) REFERENCES `messages`(`messageId`) ON DELETE CASCADE,
   CONSTRAINT `fk_media_uploader` FOREIGN KEY (`uploadedBy`) REFERENCES `users`(`userId`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+);

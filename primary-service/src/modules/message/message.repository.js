@@ -40,11 +40,30 @@ class MessageRepository {
   }
 
   async markAsDelivered(messageId, userId) {
-    await callProcedure("spMarkMessageDelivered", [messageId, userId]);
+    const result = await callProcedure("spMarkMessageDelivered", [messageId, userId]);
+    return result[0] ? result[0][0] : null;
   }
 
   async markAsRead(conversationId, userId) {
-    await callProcedure("spMarkMessagesRead", [conversationId, userId]);
+    // Returns the list of { messageId, senderId } that were marked seen.
+    const result = await callProcedure("spMarkMessagesRead", [conversationId, userId]);
+    // The affected rows are the last result set the procedure produced.
+    const affected = Array.isArray(result)
+      ? result.filter(Array.isArray).pop()
+      : [];
+    return affected || [];
+  }
+
+  async markAsFailed(messageId, userId) {
+    await callProcedure("spMarkMessageFailed", [messageId, userId || null]);
+  }
+
+  async getMessageStatus(messageId) {
+    const result = await callProcedure("spGetMessageStatus", [messageId]);
+    return {
+      messageStatus: result[0] && result[0][0] ? result[0][0].messageStatus : null,
+      receipts: result[1] || [],
+    };
   }
 
   async getUnreadCount(userId) {

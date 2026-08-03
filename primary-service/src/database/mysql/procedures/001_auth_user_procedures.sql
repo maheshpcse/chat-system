@@ -230,14 +230,31 @@ CREATE PROCEDURE spGetOnlineContacts(
   IN pUserId CHAR(36)
 )
 BEGIN
+  /* Peers who share a conversation OR accepted contact — Redis tracks online, not users.isOnline. */
   SELECT DISTINCT u.userId, u.firstName, u.lastName, u.username, u.avatarUrl
   FROM users u
-  INNER JOIN conversationParticipants cp1 ON u.userId = cp1.userId
-  INNER JOIN conversationParticipants cp2 ON cp1.conversationId = cp2.conversationId
-  WHERE cp2.userId = pUserId
-    AND u.userId != pUserId
-    AND u.isOnline = 1
-    AND u.status = 'active';
+  WHERE u.userId != pUserId
+    AND u.status = 'active'
+    AND (
+      EXISTS (
+        SELECT 1
+        FROM conversationParticipants cp1
+        INNER JOIN conversationParticipants cp2
+          ON cp1.conversationId = cp2.conversationId
+        WHERE cp1.userId = u.userId
+          AND cp2.userId = pUserId
+          AND cp1.isActive = 1
+          AND cp2.isActive = 1
+      )
+      OR EXISTS (
+        SELECT 1 FROM userContacts ct
+        WHERE ct.status = 'active'
+          AND (
+            (ct.userId = pUserId AND ct.contactUserId = u.userId)
+            OR (ct.contactUserId = pUserId AND ct.userId = u.userId)
+          )
+      )
+    );
 END //
 
 DELIMITER ;

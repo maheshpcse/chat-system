@@ -78,7 +78,7 @@ const REDIS_KEYS = Object.freeze({
 
 const REDIS_TTL = Object.freeze({
   USER_PROFILE: 3600,       // 1 hour
-  ONLINE_STATUS: 300,       // 5 minutes
+  ONLINE_STATUS: 3600,      // 1 hour — refreshed by presence_heartbeat while tab open
   CONVERSATION: 1800,       // 30 minutes
   RECENT_MESSAGES: 900,     // 15 minutes
   TYPING_INDICATOR: 10,     // 10 seconds

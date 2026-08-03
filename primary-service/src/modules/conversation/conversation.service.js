@@ -9,6 +9,12 @@ const { REDIS_KEYS, REDIS_TTL } = require("../../utils/constants");
 
 class ConversationService {
   async createPrivateConversation(userId, participantId) {
+    // Blocked users cannot start or resume a private conversation.
+    const blocked = await contactRepository.isBlocked(userId, participantId);
+    if (blocked) {
+      throw new ForbiddenError("You cannot start a conversation with this user");
+    }
+
     // Verify users are contacts before allowing conversation
     const areContacts = await contactRepository.areUsersContacts(userId, participantId);
     if (!areContacts) {
@@ -50,6 +56,10 @@ class ConversationService {
       throw new NotFoundError("Conversation not found or access denied");
     }
     return true;
+  }
+
+  async getParticipants(conversationId) {
+    return conversationRepository.getParticipants(conversationId);
   }
 }
 

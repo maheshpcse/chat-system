@@ -73,6 +73,33 @@ class AuthenticationController {
       next(error);
     }
   }
+
+  /**
+   * POST /api/auth/forgot-password
+   * Verifies the email exists and issues a short-lived reset token.
+   */
+  async forgotPassword(req, res, next) {
+    try {
+      const result = await authService.forgotPassword(req.body.email);
+      return sendSuccess(res, 200, "Email verified. You can now reset your password.", result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/auth/reset-password
+   * Sets a new password using a valid reset token.
+   */
+  async resetPassword(req, res, next) {
+    try {
+      const { resetToken, newPassword } = req.body;
+      await authService.resetPassword(resetToken, newPassword);
+      return sendSuccess(res, 200, "Password has been reset. Please login with your new password.");
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new AuthenticationController();

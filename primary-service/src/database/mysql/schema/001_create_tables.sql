@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS users (
   INDEX idxUsersRole (role),
   INDEX idxUsersOnline (isOnline),
   INDEX idxUsersCreatedAt (createdAt)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);
 
 -- ============================================================
 -- TABLE: refreshTokens
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS refreshTokens (
   INDEX idxRefreshTokensUserId (userId),
   INDEX idxRefreshTokensExpiry (expiresAt),
   CONSTRAINT fkRefreshTokensUser FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);
 
 -- ============================================================
 -- TABLE: conversations
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS conversations (
   PRIMARY KEY (conversationId),
   INDEX idxConversationsType (conversationType),
   INDEX idxConversationsLastMessage (lastMessageAt DESC)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);
 
 -- ============================================================
 -- TABLE: conversationParticipants
@@ -92,7 +92,7 @@ CREATE TABLE IF NOT EXISTS conversationParticipants (
   INDEX idxParticipantsActive (isActive),
   CONSTRAINT fkParticipantsConversation FOREIGN KEY (conversationId) REFERENCES conversations(conversationId) ON DELETE CASCADE,
   CONSTRAINT fkParticipantsUser FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);
 
 -- ============================================================
 -- TABLE: messages
@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS messages (
   INDEX idxMessagesCreatedAt (createdAt),
   CONSTRAINT fkMessagesConversation FOREIGN KEY (conversationId) REFERENCES conversations(conversationId) ON DELETE CASCADE,
   CONSTRAINT fkMessagesSender FOREIGN KEY (senderId) REFERENCES users(userId) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);
 
 -- ============================================================
 -- TABLE: messageReceipts
@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS messageReceipts (
   INDEX idxReceiptsUserId (userId),
   CONSTRAINT fkReceiptsMessage FOREIGN KEY (messageId) REFERENCES messages(messageId) ON DELETE CASCADE,
   CONSTRAINT fkReceiptsUser FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);
 
 -- ============================================================
 -- TABLE: chatGroups
@@ -155,7 +155,7 @@ CREATE TABLE IF NOT EXISTS chatGroups (
   INDEX idxGroupsName (name),
   CONSTRAINT fkGroupsConversation FOREIGN KEY (conversationId) REFERENCES conversations(conversationId) ON DELETE CASCADE,
   CONSTRAINT fkGroupsCreatedBy FOREIGN KEY (createdBy) REFERENCES users(userId) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);
 
 -- ============================================================
 -- TABLE: groupMembers
@@ -173,7 +173,7 @@ CREATE TABLE IF NOT EXISTS groupMembers (
   INDEX idxGroupMembersRole (role),
   CONSTRAINT fkGroupMembersGroup FOREIGN KEY (groupId) REFERENCES chatGroups(groupId) ON DELETE CASCADE,
   CONSTRAINT fkGroupMembersUser FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);
 
 -- ============================================================
 -- TABLE: fileUploads
@@ -194,7 +194,7 @@ CREATE TABLE IF NOT EXISTS fileUploads (
   INDEX idxUploadsUser (userId),
   INDEX idxUploadsMessage (messageId),
   CONSTRAINT fkUploadsUser FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);
 
 -- ============================================================
 -- TABLE: notifications
@@ -212,4 +212,4 @@ CREATE TABLE IF NOT EXISTS notifications (
   PRIMARY KEY (notificationId),
   INDEX idxNotificationsUser (userId, isRead, createdAt DESC),
   CONSTRAINT fkNotificationsUser FOREIGN KEY (userId) REFERENCES users(userId) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+);

@@ -76,6 +76,42 @@ class ContactController {
       next(error);
     }
   }
+
+  async blockContact(req, res, next) {
+    try {
+      const result = await contactService.blockContact(
+        req.user.userId,
+        req.params.contactUserId,
+        req.body ? req.body.reason : null
+      );
+      return sendSuccess(res, 200, "Contact blocked", result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async unblockContact(req, res, next) {
+    try {
+      const result = await contactService.unblockContact(req.user.userId, req.params.contactUserId);
+      return sendSuccess(res, 200, "Contact unblocked", result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateContactSettings(req, res, next) {
+    try {
+      const { nickname, muted, pinned } = req.body || {};
+      const result = await contactService.updateContactSettings(
+        req.user.userId,
+        req.params.contactUserId,
+        { nickname, muted, pinned }
+      );
+      return sendSuccess(res, 200, "Contact settings updated", result);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new ContactController();
