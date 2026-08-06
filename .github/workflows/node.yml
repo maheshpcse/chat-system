@@ -118,6 +118,11 @@ jobs:
     needs: build
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # Deploy only curls Render; no checkout. Override workflow default
+    # working-directory (primary-service) so the job does not fail before start.
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
     environment:
       name: production
       url: ${{ vars.RENDER_SERVICE_URL }}
@@ -172,6 +177,10 @@ jobs:
     needs: [build, deploy]
     if: always()
     runs-on: ubuntu-latest
+    # Summary job has no checkout; do not inherit primary-service cwd.
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
     steps:
       - name: Write job summary
         run: |
