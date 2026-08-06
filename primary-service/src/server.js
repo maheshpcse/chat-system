@@ -54,11 +54,14 @@ const startServer = async () => {
     initializeSocketHandlers(io);
     logger.info("Socket.IO handlers initialized");
 
-    // Step 6: Start listening
-    httpServer.listen(config.app.port, () => {
-      logger.info(`🚀 ${config.app.name} v${config.app.version} running on port ${config.app.port}`);
-      logger.info(`API Base: http://localhost:${config.app.port}/api/v1`);
-      logger.info(`Health: http://localhost:${config.app.port}/api/v1/health`);
+    // Step 6: Start listening (0.0.0.0 required on Railway/containers)
+    const listenHost = config.app.host || "0.0.0.0";
+    httpServer.listen(config.app.port, listenHost, () => {
+      logger.info(
+        `🚀 ${config.app.name} v${config.app.version} listening on ${listenHost}:${config.app.port}`
+      );
+      logger.info(`API Base: http://${listenHost}:${config.app.port}/api/v1`);
+      logger.info(`Health: http://${listenHost}:${config.app.port}/api/v1/health`);
     });
 
     // Graceful shutdown handlers

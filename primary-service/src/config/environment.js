@@ -21,11 +21,55 @@ const parseBoolean = (value, defaultValue = false) => {
 // Load environment variables from .env file
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
+// Railway / cloud hosts inject PORT. Prefer it over APP_PORT.
+const resolvedPort = parseInt(process.env.PORT || process.env.APP_PORT, 10) || 3000;
+
+// Railway MySQL plugin uses MYSQLHOST / MYSQLUSER / etc. (no underscores).
+const mysqlHost =
+  process.env.MYSQL_HOST || process.env.MYSQLHOST || "localhost";
+const mysqlPort = parseInt(
+  process.env.MYSQL_PORT || process.env.MYSQLPORT || "3306",
+  10
+);
+const mysqlDatabase =
+  process.env.MYSQL_DATABASE || process.env.MYSQLDATABASE || "chat_system";
+const mysqlUser =
+  process.env.MYSQL_USERNAME || process.env.MYSQLUSER || "root";
+const mysqlPassword =
+  process.env.MYSQL_PASSWORD || process.env.MYSQLPASSWORD || "";
+
+// Optional REDIS_URL (redis://[:password@]host:port/db)
+const parseRedisUrl = (url) => {
+  if (!url || typeof url !== "string") {
+    return null;
+  }
+  try {
+    const parsed = new URL(url);
+    const dbFromPath = parsed.pathname && parsed.pathname !== "/"
+      ? parseInt(parsed.pathname.replace(/^\//, ""), 10)
+      : NaN;
+    return {
+      host: parsed.hostname || "localhost",
+      port: parseInt(parsed.port, 10) || 6379,
+      password: parsed.password ? decodeURIComponent(parsed.password) : undefined,
+      db: Number.isFinite(dbFromPath) ? dbFromPath : 0,
+    };
+  } catch (_err) {
+    return null;
+  }
+};
+
+const redisFromUrl = parseRedisUrl(
+  process.env.REDIS_URL || process.env.REDISURL
+);
+
 const config = {
   app: {
     name: process.env.APP_NAME || "ChatPrimaryService",
-    port: parseInt(process.env.APP_PORT, 10) || 3000,
-    env: process.env.APP_ENV || "development",
+    // Railway requires binding the injected PORT on 0.0.0.0
+    port: resolvedPort,
+    host: process.env.HOST || process.env.APP_HOST || "0.0.0.0",
+    env: process.env.APP_ENV || process.env.NODE_ENV || "development",
     version: process.env.APP_VERSION || "1.0.0",
   },
 
@@ -48,11 +92,11 @@ const config = {
   },
 
   mysql: {
-    host: process.env.MYSQL_HOST || "localhost",
-    port: parseInt(process.env.MYSQL_PORT, 10) || 3306,
-    database: process.env.MYSQL_DATABASE || "chat_system",
-    user: process.env.MYSQL_USERNAME || "root",
-    password: process.env.MYSQL_PASSWORD || "",
+    host: mysqlHost,
+    port: mysqlPort,
+    database: mysqlDatabase,
+    user: mysqlUser,
+    password: mysqlPassword,
     connectionLimit: parseInt(process.env.MYSQL_CONNECTION_LIMIT, 10) || 20,
     queueLimit: parseInt(process.env.MYSQL_QUEUE_LIMIT, 10) || 0,
   },
@@ -62,12 +106,23 @@ const config = {
   },
 
   redis: {
-    host: process.env.REDIS_HOST || "localhost",
-    port: parseInt(process.env.REDIS_PORT, 10) || 6379,
-    password: process.env.REDIS_PASSWORD || undefined,
-    db: parseInt(process.env.REDIS_DB, 10) || 0,
+    host: process.env.REDIS_HOST || process.env.REDISHOST || (redisFromUrl && redisFromUrl.host) || "localhost",
+    port: parseInt(
+      process.env.REDIS_PORT || process.env.REDISPORT || String((redisFromUrl && redisFromUrl.port) || 6379),
+      10
+    ),
+    password:
+      process.env.REDIS_PASSWORD ||
+      process.env.REDISPASSWORD ||
+      (redisFromUrl && redisFromUrl.password) ||
+      undefined,
+    db: parseInt(
+      process.env.REDIS_DB || String((redisFromUrl && redisFromUrl.db) || 0),
+      10
+    ),
     keyPrefix: process.env.REDIS_KEY_PREFIX || "chat:",
-    required: parseBoolean(process.env.REDIS_REQUIRED, process.env.APP_ENV === "production"),
+    // Default optional unless explicitly required (Railway often has no Redis at first).
+    required: parseBoolean(process.env.REDIS_REQUIRED, false),
     connectTimeout: parseInt(process.env.REDIS_CONNECT_TIMEOUT, 10) || 10000,
     maxRetriesPerRequest: parseInt(process.env.REDIS_MAX_RETRIES_PER_REQUEST, 10) || 3,
   },

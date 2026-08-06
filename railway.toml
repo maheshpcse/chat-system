@@ -1,0 +1,18 @@
+# Railway config — monorepo root (chat-system)
+# Fixes Railpack "could not determine how to build" when root has no package.json.
+# Docs: https://docs.railway.com/reference/config-as-code
+#
+# Dashboard alternative: set service Root Directory = primary-service
+# and use primary-service/railway.toml instead.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+watchPatterns = ["primary-service/**", "Dockerfile", "railway.toml"]
+
+[deploy]
+# PORT is injected by Railway; app reads process.env.PORT
+healthcheckPath = "/api/v1/health/live"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10

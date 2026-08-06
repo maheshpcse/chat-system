@@ -2,7 +2,7 @@
 
 **Repository:** https://github.com/maheshpcse/chat-system  
 **Primary service path:** `primary-service/`  
-**Stack:** Node 18 · Express · MySQL · Redis (optional) · Socket.IO · GitHub Actions · Render  
+**Stack:** Node 18 · Express · MySQL · Redis (optional) · Socket.IO · GitHub Actions · Render · Railway  
 **Frontend repo:** https://github.com/maheshpcse/chat-app  
 
 ---
@@ -120,16 +120,45 @@ Service is JavaScript. There is no `tsc` step. “Build” = install + validate 
 ### Blueprint alternative
 Use `primary-service/render.yaml` via **New → Blueprint**. Still set `sync: false` secrets in UI.
 
-### Railway / Azure / AWS (preference switch)
+### Railway (chat-system monorepo)
+
+**Why deploy failed (Railpack log):** Railway analyzed **repo root**. Root has no `package.json` / `start.sh` — only `primary-service/` + `analytics-service/`. Railpack could not pick a language builder.
+
+**Code fixes in repo:**
+| File | Purpose |
+|------|---------|
+| [`railway.toml`](railway.toml) | Root: Dockerfile builder + healthcheck |
+| [`Dockerfile`](Dockerfile) | Root image builds from `primary-service/` |
+| [`.dockerignore`](.dockerignore) | Slim root build context |
+| [`primary-service/railway.toml`](primary-service/railway.toml) | When Root Directory = `primary-service` |
+| `environment.js` / `server.js` | `PORT` + bind `0.0.0.0`; Railway MySQL/Redis env aliases |
+
+**Railway dashboard setup (do this after push):**
+1. Project → service from `maheshpcse/chat-system`.
+2. **Preferred:** Settings → **Root Directory** = `primary-service`  
+   - Builder: Dockerfile (uses `primary-service/Dockerfile`)  
+   - Or Nixpacks/Railpack Node: build `npm ci --omit=dev`, start `npm start`.
+3. **Or leave root empty** and use root [`railway.toml`](railway.toml) + root [`Dockerfile`](Dockerfile) (already wired).
+4. Add **MySQL** plugin (or external DB). Map vars (app accepts both styles):
+   - `MYSQL_HOST` / `MYSQLHOST`, `MYSQL_PORT` / `MYSQLPORT`, `MYSQL_DATABASE` / `MYSQLDATABASE`, `MYSQL_USERNAME` / `MYSQLUSER`, `MYSQL_PASSWORD` / `MYSQLPASSWORD`
+5. Set secrets: `JWT_SECRET`, `JWT_REFRESH_SECRET`, `JWT_ADMIN_SECRET`, `JWT_ADMIN_REFRESH_SECRET`.
+6. Optional Redis: set `REDIS_URL` or host/port; keep `REDIS_REQUIRED=false` until Redis is attached.
+7. CORS: `CORS_ORIGIN` + `SOCKET_CORS_ORIGIN` = SPA origin (e.g. `https://maheshpcse.github.io`).
+8. Do **not** set `APP_PORT` to fight Railway — app uses injected `PORT`.
+9. Health: `/api/v1/health/live` (configured in `railway.toml`).
+10. After first healthy deploy, run migrations (Railway shell):  
+    `npm run db:migrate` (and seed only if intended).
+
+**Public URL:** Railway assigns `https://<service>.up.railway.app` (or custom domain).
+
+### Azure / AWS / VPS (preference switch)
 | Platform | Idea |
 |----------|------|
-| **Railway** | New project from repo; root `primary-service`; start `node src/server.js`; set env; replace deploy step with Railway token action or rely on Railway GitHub integration |
 | **Azure App Service** | Container from `Dockerfile` or Node stack; set app settings from secrets; deploy via `azure/webapps-deploy` |
 | **AWS ECS/Fargate** | Push image to ECR in GHA; update ECS service; ALB health = `/api/v1/health` |
 | **VPS + PM2** | `git pull`, `npm ci --omit=dev`, `pm2 start ecosystem.config.js --env production` |
 
-Default workflow is **Render deploy hook** because it matches free/simple Node hosting without storing cloud cloud credentials beyond one URL.
-
+Default GHA workflow still uses **Render deploy hook** unless you switch the deploy job.
 ---
 
 ## 5. GitHub Secrets configuration (backend)
