@@ -166,7 +166,7 @@ Register new HTTP modules in `src/routes/index.js` with an explicit prefix.
 
 ### Auth
 
-- User JWT: `Authorization: ******; middleware sets `req.user`
+- User JWT: client sends JWT access token via HTTP `Authorization` header; middleware attaches decoded payload to `req.user` (see `middleware/authentication.js`)
 - Admin JWT: separate secrets (`JWT_ADMIN_*`) and `adminAuthentication` middleware
 - Passwords: bcrypt (`BCRYPT_SALT_ROUNDS`)
 - Validation: Joi via `validate(schema)` HOF middleware
