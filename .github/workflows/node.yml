@@ -116,8 +116,9 @@ jobs:
   deploy:
     name: Deploy to Render
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # Deploy only curls Render; no checkout. Override workflow default
     # working-directory (primary-service) so the job does not fail before start.
     defaults:
