@@ -167,7 +167,7 @@ Repo: **maheshpcse/chat-system** → Settings → Secrets and variables → Acti
 
 | Secret | Required | Description |
 |--------|----------|-------------|
-| `RENDER_DEPLOY_HOOK_URL` | Yes (for GHA deploy job) | Render Deploy Hook URL |
+| `RENDER_DEPLOY_HOOK_URL` | Optional (required to trigger deploy) | Render Deploy Hook URL |
 | `RENDER_SERVICE_URL` | Optional | Public base URL for post-deploy health |
 
 **Runtime secrets** belong on **Render (or host) env**, not necessarily GitHub:
