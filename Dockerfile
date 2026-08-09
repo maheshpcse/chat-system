@@ -38,7 +38,7 @@ USER app
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-  CMD-SHELL curl -fsS "http://127.0.0.1:${PORT:-${APP_PORT:-3000}}/api/v1/health/live" || exit 1
+  CMD curl -fsS "http://127.0.0.1:${PORT:-${APP_PORT:-3000}}/api/v1/health/live" || exit 1
 
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "src/server.js"]
