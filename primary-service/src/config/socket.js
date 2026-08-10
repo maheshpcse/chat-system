@@ -19,9 +19,11 @@ let io = null;
 const initializeSocket = (httpServer) => {
   io = new Server(httpServer, {
     cors: {
+      // string | string[] — must match browser Origin (no path)
       origin: config.socket.corsOrigin,
       methods: ["GET", "POST"],
       credentials: true,
+      allowedHeaders: ["Content-Type", "Authorization"],
     },
     allowEIO3: true, // Support Socket.IO v2 clients (EIO=3)
     pingTimeout: config.socket.pingTimeout,

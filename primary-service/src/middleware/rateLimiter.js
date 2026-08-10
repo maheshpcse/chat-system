@@ -14,11 +14,14 @@ const { TooManyRequestsError } = require("../utils/errors");
  * General API rate limiter.
  * Applies to all routes by default.
  */
+const skipOptions = (req) => req.method === "OPTIONS";
+
 const generalLimiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
   max: config.rateLimit.maxRequests,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipOptions,
   handler: (req, res, next) => {
     next(new TooManyRequestsError("Too many requests. Please try again later."));
   },
@@ -34,6 +37,7 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false,
+  skip: skipOptions,
   handler: (req, res, next) => {
     next(new TooManyRequestsError("Too many login attempts. Please try again after 15 minutes."));
   },

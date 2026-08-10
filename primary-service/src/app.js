@@ -26,12 +26,42 @@ const app = express();
 // =============================================
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
+  // SPA on another origin (GitHub Pages) calling this API
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
 }));
 app.use(hpp()); // Prevent HTTP parameter pollution
+
+// CORS must answer browser preflight (OPTIONS) with Access-Control-Allow-Origin.
+// config.cors.origin is string | string[] (paths already stripped in environment.js).
+const corsOriginOption = config.cors.origin;
 app.use(cors({
-  origin: config.cors.origin,
+  origin: corsOriginOption,
   methods: config.cors.methods,
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+  ],
+  exposedHeaders: ["Content-Range", "X-Content-Range"],
   credentials: true,
+  optionsSuccessStatus: 204,
+  maxAge: 86400,
+}));
+// Explicit preflight for all routes (some proxies mishandle bare OPTIONS)
+app.options("*", cors({
+  origin: corsOriginOption,
+  methods: config.cors.methods,
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+    "Origin",
+  ],
+  credentials: true,
+  optionsSuccessStatus: 204,
   maxAge: 86400,
 }));
 

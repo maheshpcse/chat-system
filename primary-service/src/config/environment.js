@@ -18,6 +18,52 @@ const parseBoolean = (value, defaultValue = false) => {
   return ["1", "true", "yes", "on"].includes(normalized);
 };
 
+/**
+ * Normalize CORS / Socket.IO origins for browser Origin header matching.
+ * - Comma-separated lists supported
+ * - Paths stripped (https://host/chat-app → https://host) — browsers never send path
+ * - Single entry → string; multiple → string[]
+ */
+const parseCorsOrigins = (raw) => {
+  const fallback = "http://localhost:5200";
+  const parts = String(raw || fallback)
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      if (entry === "*") {
+        return "*";
+      }
+      try {
+        const url = new URL(entry);
+        // Origin = protocol + host + port only (no path/query)
+        return url.origin;
+      } catch (_err) {
+        // Already origin-like or invalid URL — strip trailing slash/path best-effort
+        return entry.replace(/\/+$/, "").replace(/(\/[^/]+)+$/, (m, _g, offset, s) => {
+          // If looks like scheme://host/path, keep scheme://host
+          const match = s.match(/^(https?:\/\/[^/]+)/i);
+          return match ? "" : m;
+        }) || entry;
+      }
+    })
+    .map((entry) => {
+      if (entry === "*") {
+        return "*";
+      }
+      try {
+        return new URL(entry).origin;
+      } catch (_e) {
+        const m = String(entry).match(/^(https?:\/\/[^/]+)/i);
+        return m ? m[1] : entry.replace(/\/+$/, "");
+      }
+    })
+    .filter(Boolean);
+
+  const unique = [...new Set(parts.length ? parts : [fallback])];
+  return unique.length === 1 ? unique[0] : unique;
+};
+
 // Load environment variables from .env file
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
@@ -143,7 +189,10 @@ const config = {
   },
 
   socket: {
-    corsOrigin: process.env.SOCKET_CORS_ORIGIN || "http://localhost:5200",
+    // Browser Origin is scheme+host(+port) only — paths like /chat-app are stripped.
+    corsOrigin: parseCorsOrigins(
+      process.env.SOCKET_CORS_ORIGIN || process.env.CORS_ORIGIN || "http://localhost:5200"
+    ),
     pingTimeout: parseInt(process.env.SOCKET_PING_TIMEOUT, 10) || 60000,
     pingInterval: parseInt(process.env.SOCKET_PING_INTERVAL, 10) || 25000,
   },
@@ -159,8 +208,12 @@ const config = {
   },
 
   cors: {
-    origin: process.env.CORS_ORIGIN || "http://localhost:5200",
-    methods: (process.env.CORS_METHODS || "GET,POST,PUT,DELETE,PATCH").split(","),
+    // Comma-separated list OK. Paths (e.g. /chat-app) stripped to real Origin.
+    origin: parseCorsOrigins(process.env.CORS_ORIGIN || "http://localhost:5200"),
+    methods: (process.env.CORS_METHODS || "GET,POST,PUT,PATCH,DELETE,OPTIONS")
+      .split(",")
+      .map((m) => m.trim())
+      .filter(Boolean),
   },
 
   bcrypt: {
