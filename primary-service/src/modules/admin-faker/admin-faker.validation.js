@@ -18,6 +18,32 @@ const generateContactsSchema = {
   }),
 };
 
+const linkContactsSchema = {
+  body: Joi.object({
+    // Owner user(s) — one-to-many when multiple contactUserIds
+    userIds: Joi.array().items(Joi.string().uuid()).min(1).max(50).required(),
+    // Contact peer(s) — many-to-one / many-to-many with userIds
+    contactUserIds: Joi.array().items(Joi.string().uuid()).min(1).max(50).required(),
+    mode: Joi.string().valid("accepted", "pending").default("accepted"),
+    // Append into existing contacts preview when provided
+    previewId: Joi.string().uuid().optional(),
+    // Accepted insert already writes dual userContacts rows
+    bidirectional: Joi.boolean().default(true),
+  }),
+};
+
+const updatePreviewContactSchema = {
+  params: Joi.object({
+    previewId: Joi.string().uuid().required(),
+    tempId: Joi.string().uuid().required(),
+  }),
+  body: Joi.object({
+    userId: Joi.string().uuid().optional(),
+    contactUserId: Joi.string().uuid().optional(),
+    mode: Joi.string().valid("accepted", "pending").optional(),
+  }).min(1),
+};
+
 const generateGroupsSchema = {
   body: Joi.object({
     count: Joi.number().integer().min(1).max(50).default(5),
@@ -83,6 +109,8 @@ const savePreviewSchema = {
 module.exports = {
   generateUsersSchema,
   generateContactsSchema,
+  linkContactsSchema,
+  updatePreviewContactSchema,
   generateGroupsSchema,
   generateMessagesSchema,
   previewIdParamSchema,

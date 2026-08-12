@@ -59,10 +59,33 @@ class AdminFakerController {
     } catch (error) { next(error); }
   }
 
+  async listContactUsers(req, res, next) {
+    try {
+      const result = await adminFakerService.listContactUsers(req.admin.adminId, req.query);
+      return sendSuccess(res, 200, "Active users for contact linking", result);
+    } catch (error) { next(error); }
+  }
+
   async generateContacts(req, res, next) {
     try {
       const result = await adminFakerService.generateContacts(req.admin.adminId, req.body);
       return sendSuccess(res, 200, "Preview contacts generated", result);
+    } catch (error) { next(error); }
+  }
+
+  async linkContacts(req, res, next) {
+    try {
+      const result = await adminFakerService.linkContacts(req.admin.adminId, req.body);
+      return sendSuccess(res, 200, "Contact links added to preview", result);
+    } catch (error) { next(error); }
+  }
+
+  async updatePreviewContact(req, res, next) {
+    try {
+      const result = await adminFakerService.updatePreviewContact(
+        req.admin.adminId, req.params.previewId, req.params.tempId, req.body
+      );
+      return sendSuccess(res, 200, "Preview contact updated", result);
     } catch (error) { next(error); }
   }
 

@@ -176,6 +176,38 @@ class AdminFakerService {
     return { saved: created.length, failed: errors.length, users: created, errors };
   }
 
+  _labelUser(u) {
+    if (!u) return "";
+    const name = `${u.firstName || ""} ${u.lastName || ""}`.trim();
+    return name ? `${name} (@${u.username})` : `@${u.username || u.userId}`;
+  }
+
+  _pairKey(userId, contactUserId) {
+    return [userId, contactUserId].sort().join(":");
+  }
+
+  async listContactUsers(adminId, { search, limit } = {}) {
+    const pool = await adminFakerRepository.listActiveUsers(500);
+    const q = String(search || "").trim().toLowerCase();
+    let users = pool.map((u) => ({
+      userId: u.userId,
+      username: u.username,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      email: u.email,
+      label: this._labelUser(u),
+      status: u.status || "active",
+    }));
+    if (q) {
+      users = users.filter((u) => {
+        const blob = `${u.firstName} ${u.lastName} ${u.username} ${u.email}`.toLowerCase();
+        return blob.includes(q);
+      });
+    }
+    const max = Math.min(Math.max(parseInt(limit, 10) || 200, 1), 500);
+    return { users: users.slice(0, max), total: users.length };
+  }
+
   async generateContacts(adminId, { count, mode }) {
     const pool = await adminFakerRepository.listActiveUsers(500);
     if (pool.length < 2) throw new BadRequestError("Need at least 2 active users before generating contacts");
@@ -187,6 +219,128 @@ class AdminFakerService {
       payloadJson: { previewId, count: contacts.length, mode: mode || "accepted" },
     });
     return { previewId, contacts, expiresInMinutes: PREVIEW_TTL_MIN };
+  }
+
+  /**
+   * Build preview rows from explicit user selections (1:1, 1:N, N:1, N:M).
+   * Cartesian product of userIds × contactUserIds (skip self + dups).
+   */
+  async linkContacts(adminId, { userIds, contactUserIds, mode, previewId: existingPreviewId }) {
+    const owners = Array.isArray(userIds) ? userIds.filter(Boolean) : [];
+    const peers = Array.isArray(contactUserIds) ? contactUserIds.filter(Boolean) : [];
+    if (!owners.length || !peers.length) {
+      throw new BadRequestError("Select at least one user and one contact");
+    }
+    const pool = await adminFakerRepository.listActiveUsers(500);
+    const byId = new Map(pool.map((u) => [u.userId, u]));
+    for (const id of [...owners, ...peers]) {
+      if (!byId.has(id)) {
+        throw new BadRequestError(`User not found or inactive: ${id}`);
+      }
+    }
+    const linkMode = mode === "pending" ? "pending" : "accepted";
+    let entry = null;
+    let previewId = existingPreviewId || null;
+    if (previewId) {
+      entry = await this._getPreview(previewId, adminId);
+      if (entry && entry.entityType !== "contacts") {
+        throw new BadRequestError("Preview is not a contacts session");
+      }
+      if (!entry) {
+        previewId = null;
+      }
+    }
+    if (!entry) {
+      previewId = generateId();
+      entry = { adminId, entityType: "contacts", contacts: [], createdAt: Date.now() };
+    }
+    const used = new Set(
+      (entry.contacts || []).map((c) => this._pairKey(c.userId, c.contactUserId))
+    );
+    const added = [];
+    for (const userId of owners) {
+      for (const contactUserId of peers) {
+        if (userId === contactUserId) continue;
+        const key = this._pairKey(userId, contactUserId);
+        if (used.has(key)) continue;
+        used.add(key);
+        const a = byId.get(userId);
+        const b = byId.get(contactUserId);
+        const row = {
+          tempId: generateId(),
+          userId,
+          contactUserId,
+          userLabel: this._labelUser(a),
+          contactLabel: this._labelUser(b),
+          mode: linkMode,
+          status: linkMode === "pending" ? "pending" : "active",
+          source: "link",
+        };
+        entry.contacts.push(row);
+        added.push(row);
+      }
+    }
+    if (!added.length) {
+      throw new BadRequestError("No new pairs to add (duplicates or self-links skipped)");
+    }
+    await this._setPreview(previewId, entry);
+    await adminFakerRepository.logSession({
+      adminId,
+      entityType: "contacts",
+      action: "link",
+      recordCount: added.length,
+      payloadJson: {
+        previewId,
+        added: added.length,
+        owners: owners.length,
+        peers: peers.length,
+        mode: linkMode,
+      },
+    });
+    return {
+      previewId,
+      contacts: entry.contacts,
+      added: added.length,
+      expiresInMinutes: PREVIEW_TTL_MIN,
+    };
+  }
+
+  async updatePreviewContact(adminId, previewId, tempId, patch = {}) {
+    const entry = await this._requirePreview(previewId, adminId, "contacts");
+    const idx = entry.contacts.findIndex((c) => c.tempId === tempId);
+    if (idx === -1) throw new BadRequestError("Preview contact not found");
+    const current = entry.contacts[idx];
+    const pool = await adminFakerRepository.listActiveUsers(500);
+    const byId = new Map(pool.map((u) => [u.userId, u]));
+    const nextUserId = patch.userId || current.userId;
+    const nextContactId = patch.contactUserId || current.contactUserId;
+    if (nextUserId === nextContactId) {
+      throw new BadRequestError("User and contact must be different");
+    }
+    if (!byId.has(nextUserId) || !byId.has(nextContactId)) {
+      throw new BadRequestError("Selected user is missing or inactive");
+    }
+    const nextMode = patch.mode === "pending" || patch.mode === "accepted"
+      ? patch.mode
+      : current.mode;
+    const key = this._pairKey(nextUserId, nextContactId);
+    const dup = entry.contacts.some(
+      (c, i) => i !== idx && this._pairKey(c.userId, c.contactUserId) === key
+    );
+    if (dup) throw new BadRequestError("That user pair already exists in preview");
+    const a = byId.get(nextUserId);
+    const b = byId.get(nextContactId);
+    entry.contacts[idx] = {
+      ...current,
+      userId: nextUserId,
+      contactUserId: nextContactId,
+      userLabel: this._labelUser(a),
+      contactLabel: this._labelUser(b),
+      mode: nextMode,
+      status: nextMode === "pending" ? "pending" : "active",
+    };
+    await this._setPreview(previewId, entry);
+    return entry.contacts[idx];
   }
 
   async regeneratePreviewContact(adminId, previewId, tempId) {

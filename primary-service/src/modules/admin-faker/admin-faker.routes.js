@@ -7,6 +7,8 @@ const { validate } = require("../../middleware/validation");
 const {
   generateUsersSchema,
   generateContactsSchema,
+  linkContactsSchema,
+  updatePreviewContactSchema,
   generateGroupsSchema,
   generateMessagesSchema,
   previewIdParamSchema,
@@ -29,8 +31,15 @@ router.delete("/users/preview/:previewId", validate(previewIdParamSchema), admin
 router.post("/users/save", validate(savePreviewSchema), adminFakerController.saveUsers);
 
 // Contacts
+router.get("/contacts/users", adminFakerController.listContactUsers);
 router.post("/contacts/generate", validate(generateContactsSchema), adminFakerController.generateContacts);
+router.post("/contacts/link", validate(linkContactsSchema), adminFakerController.linkContacts);
 router.get("/contacts/preview/:previewId", validate(previewIdParamSchema), adminFakerController.getPreview);
+router.patch(
+  "/contacts/preview/:previewId/:tempId",
+  validate(updatePreviewContactSchema),
+  adminFakerController.updatePreviewContact
+);
 router.delete("/contacts/preview/:previewId/:tempId", validate(previewUserParamSchema), adminFakerController.deletePreviewItem);
 router.post("/contacts/preview/:previewId/:tempId/regenerate", validate(previewUserParamSchema), adminFakerController.regeneratePreviewContact);
 router.delete("/contacts/preview/:previewId", validate(previewIdParamSchema), adminFakerController.discardPreview);
