@@ -1,4 +1,4 @@
-use strict';
+"use strict";
 
 const { getRedisClient } = require("../../config/redis");
 const { REDIS_KEYS } = require("../../utils/constants");
