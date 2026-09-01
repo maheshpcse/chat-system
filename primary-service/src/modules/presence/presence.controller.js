@@ -7,7 +7,7 @@ const getContactsPresence = async (req, res, next) => {
   try {
     const userId = req.user.userId;
     const presenceData = await presenceService.getContactsPresence(userId);
-    sendSuccess(res, presenceData, "Contacts presence retrieved");
+    return sendSuccess(res, 200, "Contacts presence retrieved", presenceData);
   } catch (error) {
     next(error);
   }
@@ -16,8 +16,11 @@ const getContactsPresence = async (req, res, next) => {
 const getUserPresence = async (req, res, next) => {
   try {
     const { userId } = req.params;
-    const presenceData = await presenceService.getUserPresence(userId);
-    sendSuccess(res, presenceData, "User presence retrieved");
+    const presenceData = await presenceService.getUserPresence(
+      userId,
+      req.user.userId
+    );
+    return sendSuccess(res, 200, "User presence retrieved", presenceData);
   } catch (error) {
     next(error);
   }
