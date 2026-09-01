@@ -4,10 +4,33 @@ const { getRedisClient } = require("../../config/redis");
 const { REDIS_KEYS } = require("../../utils/constants");
 const contactRepository = require("../contact/contact.repository");
 const settingsRepository = require("../settings/settings.repository");
+const logger = require("../../utils/logger");
 
 const PRIVACY_EVERYONE = "everyone";
 const PRIVACY_CONTACTS = "contacts";
 const PRIVACY_NOBODY = "nobody";
+
+/**
+ * Safe Redis GET — never throws (Railway often has Redis down/optional).
+ * @param {string} key
+ * @returns {Promise<string|null>}
+ */
+const safeRedisGet = async (key) => {
+  try {
+    const redis = getRedisClient();
+    if (!redis) {
+      return null;
+    }
+    // ioredis status: wait|connecting|connect|ready|close|end
+    if (redis.status && redis.status !== "ready" && redis.status !== "connect") {
+      return null;
+    }
+    return await redis.get(key);
+  } catch (error) {
+    logger.warn(`Presence Redis get failed for ${key}: ${error.message || error}`);
+    return null;
+  }
+};
 
 const resolvePrivacyLevel = (settings, key) => {
   if (!settings || settings[key] == null) {
@@ -17,7 +40,7 @@ const resolvePrivacyLevel = (settings, key) => {
   if (typeof raw === "string") {
     return raw.toLowerCase();
   }
-  if (raw && typeof raw === "object" && raw.value) {
+  if (raw && typeof raw === "object" && raw.value != null) {
     return String(raw.value).toLowerCase();
   }
   return String(raw).toLowerCase();
@@ -82,23 +105,38 @@ const applyPresencePrivacy = async (raw, viewerId) => {
 };
 
 const getContactsPresence = async (userId) => {
-  const redis = getRedisClient();
-  const contacts = await contactRepository.getUserContacts(userId);
+  let contacts = [];
+  try {
+    contacts = await contactRepository.getUserContacts(userId);
+  } catch (error) {
+    logger.error(`getContactsPresence contacts load failed: ${error.message || error}`);
+    return [];
+  }
 
   const presenceData = await Promise.all(
     (contacts || []).map(async (contact) => {
       const contactUserId = contact.contactUserId;
-      const isOnline = await redis.get(
-        REDIS_KEYS.USER_ONLINE + contactUserId
-      );
-      const lastSeen = await redis.get("user:lastSeen:" + contactUserId);
+      const isOnline = await safeRedisGet(REDIS_KEYS.USER_ONLINE + contactUserId);
+      const lastSeen = await safeRedisGet("user:lastSeen:" + contactUserId);
 
       const raw = {
         userId: contactUserId,
         isOnline: !!isOnline,
         lastSeen: lastSeen || null,
       };
-      return applyPresencePrivacy(raw, userId);
+      try {
+        return await applyPresencePrivacy(raw, userId);
+      } catch (error) {
+        logger.warn(
+          `Presence privacy failed for ${contactUserId}: ${error.message || error}`
+        );
+        return {
+          userId: contactUserId,
+          isOnline: false,
+          lastSeen: null,
+          privacyHidden: false,
+        };
+      }
     })
   );
 
@@ -106,10 +144,9 @@ const getContactsPresence = async (userId) => {
 };
 
 const getUserPresence = async (userId, viewerId) => {
-  const redis = getRedisClient();
-  const isOnline = await redis.get(REDIS_KEYS.USER_ONLINE + userId);
-  const lastSeen = await redis.get("user:lastSeen:" + userId);
-  const sessionCount = await redis.get(REDIS_KEYS.USER_SESSIONS + userId);
+  const isOnline = await safeRedisGet(REDIS_KEYS.USER_ONLINE + userId);
+  const lastSeen = await safeRedisGet("user:lastSeen:" + userId);
+  const sessionCount = await safeRedisGet(REDIS_KEYS.USER_SESSIONS + userId);
 
   const raw = {
     userId: userId,
@@ -118,7 +155,18 @@ const getUserPresence = async (userId, viewerId) => {
     activeDevices: parseInt(sessionCount, 10) || 0,
   };
 
-  return applyPresencePrivacy(raw, viewerId || userId);
+  try {
+    return await applyPresencePrivacy(raw, viewerId || userId);
+  } catch (error) {
+    logger.warn(`getUserPresence privacy failed: ${error.message || error}`);
+    return {
+      userId: userId,
+      isOnline: !!isOnline,
+      lastSeen: lastSeen || null,
+      activeDevices: parseInt(sessionCount, 10) || 0,
+      privacyHidden: false,
+    };
+  }
 };
 
 module.exports = { getContactsPresence, getUserPresence };

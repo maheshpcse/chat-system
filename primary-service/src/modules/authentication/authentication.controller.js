@@ -50,10 +50,15 @@ class AuthenticationController {
 
   /**
    * POST /api/auth/logout
+   * Body.refreshToken optional — FE may only send Bearer access token.
+   * Missing/empty refreshToken revokes all sessions for the user.
    */
   async logout(req, res, next) {
     try {
-      const { refreshToken } = req.body;
+      const refreshToken =
+        req.body && typeof req.body.refreshToken === "string"
+          ? req.body.refreshToken
+          : null;
       await authService.logout(req.user.userId, refreshToken);
       return sendSuccess(res, 200, "Logged out successfully");
     } catch (error) {

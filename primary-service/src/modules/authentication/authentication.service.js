@@ -156,12 +156,17 @@ class AuthenticationService {
   }
 
   /**
-   * Logs out a user by revoking their refresh token.
+   * Logs out a user by revoking refresh token(s).
    * @param {string} userId - User ID
-   * @param {string} refreshToken - Token to revoke
+   * @param {string|null|undefined} refreshToken - Specific token, or omit to revoke all
    */
   async logout(userId, refreshToken) {
-    await authRepository.revokeRefreshToken(userId, refreshToken);
+    if (refreshToken && typeof refreshToken === "string" && refreshToken.trim()) {
+      await authRepository.revokeRefreshToken(userId, refreshToken);
+    } else {
+      // FE often posts {} on logout — clear all sessions instead of SP null crash
+      await authRepository.revokeAllRefreshTokens(userId);
+    }
     logger.info(`User logged out`, { userId });
   }
 
