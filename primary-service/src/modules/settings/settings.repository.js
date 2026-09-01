@@ -1,44 +1,72 @@
 "use strict";
 
-/**
- * Settings Repository
- * Data access layer for user settings key-value store via stored procedures.
- */
-
 const { callProcedure } = require("../../config/database");
 
 class SettingsRepository {
   async getUserSettings(userId) {
-    const result = await callProcedure("sp_get_user_settings", [userId]);
-    // Transform rows to key-value object
+    const result = await callProcedure("spGetUserSettings", [userId]);
     const settings = {};
-    if (result[0]) {
-      result[0].forEach((row) => {
+    const rows = Array.isArray(result)
+      ? Array.isArray(result[0])
+        ? result[0]
+        : result
+      : [];
+
+    rows.forEach((row) => {
+      if (!row) {
+        return;
+      }
+      const key = row.settingKey != null ? row.settingKey : row.setting_key;
+      const raw =
+        row.settingValue != null ? row.settingValue : row.setting_value;
+      if (key == null) {
+        return;
+      }
+      if (raw == null) {
+        settings[key] = null;
+        return;
+      }
+      if (typeof raw === "string") {
         try {
-          settings[row.setting_key] = JSON.parse(row.setting_value);
-        } catch {
-          settings[row.setting_key] = row.setting_value;
+          settings[key] = JSON.parse(raw);
+        } catch (e) {
+          settings[key] = raw;
         }
-      });
-    }
+      } else {
+        settings[key] = raw;
+      }
+    });
     return settings;
   }
 
   async upsertSetting(userId, key, value) {
-    const stringValue =
-      typeof value === "object" ? JSON.stringify(value) : String(value);
-    await callProcedure("sp_upsert_user_setting", [userId, key, stringValue]);
+    let stringValue;
+    if (value === null || value === undefined) {
+      stringValue = "";
+    } else if (typeof value === "object") {
+      stringValue = JSON.stringify(value);
+    } else if (typeof value === "boolean" || typeof value === "number") {
+      stringValue = JSON.stringify(value);
+    } else {
+      stringValue = String(value);
+    }
+    await callProcedure("spUpsertUserSetting", [userId, key, stringValue]);
   }
 
   async upsertBulk(userId, settings) {
-    const promises = Object.entries(settings).map(([key, value]) =>
-      this.upsertSetting(userId, key, value)
+    if (!settings || typeof settings !== "object") {
+      return;
+    }
+    const entries = Object.entries(settings).filter(
+      ([k]) => k != null && String(k).trim() !== ""
     );
-    await Promise.all(promises);
+    for (const [key, value] of entries) {
+      await this.upsertSetting(userId, key, value);
+    }
   }
 
   async deleteSetting(userId, key) {
-    await callProcedure("sp_delete_user_setting", [userId, key]);
+    await callProcedure("spDeleteUserSetting", [userId, key]);
   }
 }
 
