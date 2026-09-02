@@ -6,9 +6,25 @@ const updateProfileSchema = {
   body: Joi.object({
     firstName: Joi.string().min(2).max(50).optional(),
     lastName: Joi.string().min(2).max(50).optional(),
-    phoneNumber: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).optional().allow(null),
-    avatarUrl: Joi.string().uri().optional().allow(null),
-    bio: Joi.string().max(500).optional().allow(""),
+    // Optional: empty string, null, or loose international phone (spaces/dashes OK)
+    phoneNumber: Joi.string()
+      .allow("", null)
+      .optional()
+      .custom((value, helpers) => {
+        if (value == null || value === "") {
+          return value;
+        }
+        const digits = String(value).replace(/[\s\-().]/g, "");
+        if (!/^\+?[0-9]{7,15}$/.test(digits)) {
+          return helpers.error("string.pattern.base");
+        }
+        return value;
+      })
+      .messages({
+        "string.pattern.base": "Enter a valid phone number or leave blank",
+      }),
+    avatarUrl: Joi.string().uri().optional().allow("", null),
+    bio: Joi.string().max(500).optional().allow("", null),
   }),
 };
 

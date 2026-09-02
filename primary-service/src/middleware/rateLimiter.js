@@ -33,10 +33,10 @@ const generalLimiter = rateLimit({
  */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 10 attempts per window
+  max: 40, // raised from 10 — login + refresh + multi-device
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: false,
+  skipSuccessfulRequests: true, // successful auth does not count against limit
   skip: skipOptions,
   handler: (req, res, next) => {
     next(new TooManyRequestsError("Too many login attempts. Please try again after 15 minutes."));
@@ -49,7 +49,7 @@ const authLimiter = rateLimit({
  */
 const messageLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 60, // 60 messages per minute
+  max: 120, // raised from 60
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => req.user ? req.user.userId : req.ip,
@@ -63,7 +63,7 @@ const messageLimiter = rateLimit({
  */
 const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50, // 50 uploads per hour
+  max: 100, // raised from 50
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => req.user ? req.user.userId : req.ip,

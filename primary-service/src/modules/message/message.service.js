@@ -54,19 +54,28 @@ class MessageService {
       attachmentUrl,
     });
 
-    // Cache recent message
-    const redis = getRedisClient();
-    const cacheKey = `${REDIS_KEYS.RECENT_MESSAGES}${conversationId}`;
-    await redis.lpush(cacheKey, JSON.stringify(message));
-    await redis.ltrim(cacheKey, 0, 49); // Keep last 50
-    await redis.expire(cacheKey, REDIS_TTL.RECENT_MESSAGES);
+    // Cache recent message (Redis optional — never fail the send)
+    try {
+      const redis = getRedisClient();
+      if (redis && (redis.status === "ready" || redis.status === "connect")) {
+        const cacheKey = `${REDIS_KEYS.RECENT_MESSAGES}${conversationId}`;
+        await redis.lpush(cacheKey, JSON.stringify(message));
+        await redis.ltrim(cacheKey, 0, 49); // Keep last 50
+        await redis.expire(cacheKey, REDIS_TTL.RECENT_MESSAGES);
+      }
+    } catch (cacheErr) {
+      logger.debug("message cache skip", { error: cacheErr.message });
+    }
 
-    // Authoritative real-time broadcast: persistence and socket now share one
-    // source of truth (the saved message), so clients never receive an
-    // un-persisted message.
+    // Ensure messageId present on payload (SP row may omit if SELECT fails)
+    const payload = message && message.messageId
+      ? message
+      : { ...(message || {}), messageId, conversationId, senderId: userId, content, messageType, attachmentUrl };
+
+    // Authoritative real-time broadcast: persistence and socket share one payload.
     const io = safeIO();
     if (io) {
-      io.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.NEW_MESSAGE, message);
+      io.to(`conversation:${conversationId}`).emit(SOCKET_EVENTS.NEW_MESSAGE, payload);
     }
 
     // Persist + push a notification to each other participant.
@@ -86,7 +95,7 @@ class MessageService {
     });
 
     logger.debug("Message sent", { messageId, conversationId });
-    return message;
+    return payload;
   }
 
   async getMessages(userId, conversationId, page, limit, before) {

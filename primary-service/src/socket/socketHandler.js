@@ -345,49 +345,63 @@ const handleMessageDelivered = async (io, socket, { messageId }) => {
  * Only marks user offline when ALL sockets are disconnected (supports multiple tabs).
  */
 const handleDisconnect = async (io, socket) => {
-  const redis = getRedisClient();
-  const sessionKey = `${REDIS_KEYS.USER_SESSIONS}${socket.userId}`;
+  if (!socket.userId) {
+    return;
+  }
 
-  // Decrement active socket count
-  const count = await redis.decr(sessionKey);
-
-  // Update last seen
-  await redis.set(`user:lastSeen:${socket.userId}`, new Date().toISOString());
-
-  // Only mark offline if no more active sockets
-  if (count <= 0) {
-    await redis.del(sessionKey);
-    await redis.del(`${REDIS_KEYS.USER_ONLINE}${socket.userId}`);
-
-    // Peer-scoped offline broadcast (friends both directions + conversation peers)
-    try {
-      const peerIds = await collectPeerIds(socket.userId);
-      peerIds.forEach((peerId) => {
-        io.to(`user:${peerId}`).emit(SOCKET_EVENTS.USER_OFFLINE, {
-          userId: socket.userId,
-          lastSeen: new Date().toISOString(),
-          timestamp: Date.now(),
-        });
+  let count = 0;
+  try {
+    const redis = getRedisClient();
+    if (!redis || (redis.status && redis.status !== "ready" && redis.status !== "connect")) {
+      // Redis down: still broadcast offline so peers update (best-effort)
+      socket.broadcast.emit(SOCKET_EVENTS.USER_OFFLINE, {
+        userId: socket.userId,
+        lastSeen: new Date().toISOString(),
+        timestamp: Date.now(),
       });
-      if (peerIds.size === 0) {
+      return;
+    }
+
+    const sessionKey = `${REDIS_KEYS.USER_SESSIONS}${socket.userId}`;
+    count = await redis.decr(sessionKey);
+    await redis.set(`user:lastSeen:${socket.userId}`, new Date().toISOString());
+
+    // Only mark offline if no more active sockets
+    if (count <= 0) {
+      await redis.del(sessionKey);
+      await redis.del(`${REDIS_KEYS.USER_ONLINE}${socket.userId}`);
+
+      try {
+        const peerIds = await collectPeerIds(socket.userId);
+        peerIds.forEach((peerId) => {
+          io.to(`user:${peerId}`).emit(SOCKET_EVENTS.USER_OFFLINE, {
+            userId: socket.userId,
+            lastSeen: new Date().toISOString(),
+            timestamp: Date.now(),
+          });
+        });
+        if (peerIds.size === 0) {
+          socket.broadcast.emit(SOCKET_EVENTS.USER_OFFLINE, {
+            userId: socket.userId,
+            lastSeen: new Date().toISOString(),
+            timestamp: Date.now(),
+          });
+        }
+      } catch (err) {
+        logger.error("handleDisconnect contact lookup failed", { error: err.message });
         socket.broadcast.emit(SOCKET_EVENTS.USER_OFFLINE, {
           userId: socket.userId,
           lastSeen: new Date().toISOString(),
           timestamp: Date.now(),
         });
       }
-    } catch (err) {
-      logger.error("handleDisconnect contact lookup failed", { error: err.message });
-      socket.broadcast.emit(SOCKET_EVENTS.USER_OFFLINE, {
-        userId: socket.userId,
-        lastSeen: new Date().toISOString(),
-        timestamp: Date.now(),
-      });
-    }
 
-    logger.info(`User ${socket.userId} is now OFFLINE (all sockets disconnected)`);
-  } else {
-    logger.debug(`User ${socket.userId} disconnected one tab (${count} remaining)`);
+      logger.info(`User ${socket.userId} is now OFFLINE (all sockets disconnected)`);
+    } else {
+      logger.debug(`User ${socket.userId} disconnected one tab (${count} remaining)`);
+    }
+  } catch (err) {
+    logger.error("handleDisconnect failed", { error: err.message, userId: socket.userId });
   }
 };
 
