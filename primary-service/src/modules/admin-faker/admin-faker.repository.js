@@ -8,18 +8,51 @@ const { callProcedure, getPool } = require("../../config/database");
 const { generateId } = require("../../utils/helpers");
 
 class AdminFakerRepository {
+  /**
+   * Audit log for Data Studio actions.
+   * Soft-fails when spCreateFakerSession / admin_faker_sessions is missing
+   * so generate/preview/save still succeed on partially migrated DBs.
+   */
   async logSession({ adminId, entityType, action, recordCount, payloadJson }) {
     const sessionId = generateId();
     const payload = payloadJson ? JSON.stringify(payloadJson) : null;
-    const result = await callProcedure("spCreateFakerSession", [
-      sessionId,
-      adminId,
-      entityType,
-      action,
-      recordCount || 0,
-      payload,
-    ]);
-    return result[0] ? result[0][0] : { sessionId };
+    try {
+      const result = await callProcedure("spCreateFakerSession", [
+        sessionId,
+        adminId,
+        entityType,
+        action,
+        recordCount || 0,
+        payload,
+      ]);
+      return result[0] ? result[0][0] : { sessionId };
+    } catch (err) {
+      const code = err && (err.code || err.errno);
+      const msg = (err && err.message) || String(err);
+      // Missing procedure/table or similar — do not fail the main operation
+      if (
+        code === "ER_SP_DOES_NOT_EXIST" ||
+        code === "ER_NO_SUCH_TABLE" ||
+        code === 1305 ||
+        code === 1146 ||
+        /spCreateFakerSession|admin_faker_sessions|does not exist|Unknown procedure/i.test(msg)
+      ) {
+        try {
+          // eslint-disable-next-line global-require
+          const logger = require("../../utils/logger");
+          logger.warn("Faker session log skipped (schema missing)", {
+            code,
+            message: msg,
+            entityType,
+            action,
+          });
+        } catch (_e) {
+          // ignore logger issues
+        }
+        return { sessionId, skipped: true };
+      }
+      throw err;
+    }
   }
 
   async findExistingEmails(emails) {
