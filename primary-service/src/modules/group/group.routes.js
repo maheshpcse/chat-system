@@ -12,6 +12,7 @@ router.post("/", authenticate, validate(createGroupSchema), groupController.crea
 router.get("/", authenticate, groupController.getUserGroups);
 router.get("/:groupId", authenticate, groupController.getDetails);
 router.put("/:groupId", authenticate, validate(updateGroupSchema), groupController.update);
+router.get("/:groupId/members", authenticate, groupController.getMembers);
 router.post("/:groupId/members", authenticate, validate(addMemberSchema), groupController.addMember);
 router.delete("/:groupId/members/:userId", authenticate, validate(removeMemberSchema), groupController.removeMember);
 

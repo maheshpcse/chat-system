@@ -54,6 +54,15 @@ class GroupController {
     }
   }
 
+  async getMembers(req, res, next) {
+    try {
+      const members = await groupService.getGroupMembers(req.params.groupId);
+      return sendSuccess(res, 200, "Group members retrieved", members);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getUserGroups(req, res, next) {
     try {
       const groups = await groupService.getUserGroups(req.user.userId);

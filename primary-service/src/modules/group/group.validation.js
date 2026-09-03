@@ -17,7 +17,8 @@ const updateGroupSchema = {
   body: Joi.object({
     name: Joi.string().min(2).max(100).optional(),
     description: Joi.string().max(500).optional().allow(""),
-    avatarUrl: Joi.string().uri().optional().allow(null),
+    avatarUrl: Joi.string().uri({ allowRelative: true }).optional().allow("", null),
+    avatar: Joi.string().uri({ allowRelative: true }).optional().allow("", null),
   }),
 };
 

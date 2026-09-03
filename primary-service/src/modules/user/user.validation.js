@@ -23,7 +23,7 @@ const updateProfileSchema = {
       .messages({
         "string.pattern.base": "Enter a valid phone number or leave blank",
       }),
-    avatarUrl: Joi.string().uri().optional().allow("", null),
+    avatarUrl: Joi.string().uri({ allowRelative: true }).optional().allow("", null),
     bio: Joi.string().max(500).optional().allow("", null),
   }),
 };

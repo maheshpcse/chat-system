@@ -35,7 +35,12 @@ class GroupService {
 
   async updateGroup(userId, groupId, updateData) {
     await this.verifyAdminAccess(groupId, userId);
-    const updated = await groupRepository.updateGroup(groupId, updateData);
+    const payload = {
+      ...updateData,
+      avatarUrl: updateData.avatarUrl != null ? updateData.avatarUrl : updateData.avatar,
+    };
+    delete payload.avatar;
+    const updated = await groupRepository.updateGroup(groupId, payload);
     if (!updated) {
       throw new NotFoundError("Group not found");
     }
@@ -66,6 +71,14 @@ class GroupService {
     }
     const members = await groupRepository.getGroupMembers(groupId);
     return { ...group, members };
+  }
+
+  async getGroupMembers(groupId) {
+    const group = await groupRepository.getGroupById(groupId);
+    if (!group) {
+      throw new NotFoundError("Group not found");
+    }
+    return groupRepository.getGroupMembers(groupId);
   }
 
   async getUserGroups(userId) {
